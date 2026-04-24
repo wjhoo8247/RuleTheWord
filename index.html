@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+  <title>Vocab</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f0f2f8;
+      --surface: #ffffff;
+      --surface2: #f5f6fa;
+      --border: #e0e3ef;
+      --text: #1a1a2e;
+      --text-muted: #6b7094;
+      --text-dim: #b0b5cc;
+      --accent: #4f5ff7;
+      --accent-light: #eef0ff;
+      --green: #16a34a;
+      --green-bg: #f0fdf4;
+      --red: #dc2626;
+      --red-bg: #fef2f2;
+      --yellow: #d97706;
+      --yellow-bg: #fffbeb;
+      --radius: 14px;
+      --input-h: 58px;
+      --transition: 0.16s ease;
+      --shadow: 0 2px 12px rgba(79,95,247,0.08);
+      --shadow-sm: 0 1px 4px rgba(0,0,0,0.06);
+    }
+
+    html, body { height: 100%; background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      line-height: 1.5; -webkit-font-smoothing: antialiased; }
+
+    /* ── Nav ── */
+    .nav {
+      position: fixed; top: 0; left: 0; right: 0; height: 56px;
+      background: rgba(240,242,248,0.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 20px; z-index: 100; gap: 10px;
+    }
+    .nav-logo { font-size: 17px; font-weight: 700; color: var(--accent); letter-spacing: -0.03em; flex-shrink: 0; }
+    .nav-tabs { display: flex; gap: 4px; }
+    .nav-tab {
+      padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 500;
+      cursor: pointer; border: none; background: transparent; color: var(--text-muted); transition: var(--transition);
+    }
+    .nav-tab.active { background: var(--accent); color: #fff; }
+    .nav-tab:hover:not(.active) { background: var(--accent-light); color: var(--accent); }
+    .review-btn {
+      padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600;
+      cursor: pointer; border: 1.5px solid var(--border); background: var(--surface); color: var(--text-muted);
+      transition: var(--transition); flex-shrink: 0;
+    }
+    .review-btn.active { background: var(--yellow-bg); border-color: rgba(217,119,6,0.4); color: var(--yellow); }
+    .review-btn:hover:not(.active) { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Pages ── */
+    .page { display: none !important; padding-top: 72px; }
+    .page.active { display: block !important; }
+
+    /* ── Quiz Page ── */
+    #quiz-page.active { display: flex !important; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 80px 16px 24px; }
+    .container { width: 100%; max-width: 580px; }
+
+    .stats-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; font-size: 13px; color: var(--text-muted); }
+    .stats-left { display: flex; gap: 18px; }
+    .stat { display: flex; align-items: center; gap: 5px; }
+    .stat-val { font-weight: 700; font-size: 15px; color: var(--text); }
+    .review-indicator {
+      font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase;
+      padding: 3px 10px; border-radius: 20px; background: var(--yellow-bg);
+      border: 1px solid rgba(217,119,6,0.25); color: var(--yellow); display: none;
+    }
+    .review-indicator.visible { display: inline-block; }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 32px 32px 24px; position: relative; overflow: hidden; box-shadow: var(--shadow);
+    }
+    @media (max-width: 480px) { .card { padding: 22px 18px 18px; } }
+
+    .progress-bar { position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--surface2); }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #818cf8); transition: width 0.45s ease; border-radius: 0 2px 2px 0; }
+
+    .sentence-wrap { min-height: 64px; display: flex; align-items: center; margin-bottom: 6px; }
+    #sentence { font-size: clamp(16px, 3.5vw, 20px); font-weight: 500; line-height: 1.6; color: var(--text); letter-spacing: -0.01em; }
+    #sentence .blank { display: inline-block; color: var(--accent); font-weight: 700; border-bottom: 2.5px solid var(--accent); min-width: 48px; padding: 0 4px; }
+
+    #korean-translation { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; min-height: 18px; line-height: 1.5; padding-left: 2px; }
+
+    /* ── Word info (shown from start) ── */
+    .word-info-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; min-height: 20px; }
+    .word-info-chip { font-size: 11px; padding: 3px 9px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface2); color: var(--text-muted); }
+    .word-info-chip.pos { background: var(--accent-light); border-color: rgba(79,95,247,0.2); color: var(--accent); font-weight: 600; }
+    .word-info-chip.syn { background: #f0fdf4; border-color: rgba(22,163,74,0.2); color: var(--green); }
+
+    .attempts-row { display: flex; gap: 5px; margin-bottom: 10px; min-height: 18px; align-items: center; }
+    .attempt-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); transition: background 0.2s; }
+    .attempt-dot.wrong { background: var(--red); }
+
+    .input-wrap { position: relative; margin-bottom: 14px; }
+    #answer-input {
+      width: 100%; height: var(--input-h); background: var(--surface2); border: 1.5px solid var(--border);
+      border-radius: 10px; padding: 0 50px 0 18px; font-size: 17px; font-family: inherit; color: var(--text);
+      outline: none; transition: border-color var(--transition), background var(--transition), box-shadow var(--transition);
+      caret-color: var(--accent);
+    }
+    #answer-input::placeholder { color: var(--text-dim); }
+    #answer-input:focus { border-color: var(--accent); background: #fff; box-shadow: 0 0 0 3px rgba(79,95,247,0.1); }
+    #answer-input.correct { border-color: var(--green) !important; background: var(--green-bg) !important; color: var(--green) !important; box-shadow: 0 0 0 3px rgba(22,163,74,0.1) !important; }
+    #answer-input.incorrect { border-color: var(--red) !important; background: var(--red-bg) !important; color: var(--red) !important; box-shadow: 0 0 0 3px rgba(220,38,38,0.1) !important; }
+    .enter-hint { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font-size: 11px; color: var(--text-dim); background: var(--surface); border: 1px solid var(--border); padding: 2px 7px; border-radius: 6px; pointer-events: none; }
+
+    @keyframes shake {
+      0%  { transform: translateX(0); } 15% { transform: translateX(-8px); }
+      30% { transform: translateX(8px); } 45% { transform: translateX(-6px); }
+      60% { transform: translateX(6px); } 75% { transform: translateX(-3px); }
+      90% { transform: translateX(3px); } 100%{ transform: translateX(0); }
+    }
+    .shake { animation: shake 0.38s ease; }
+
+    #hint-text { font-size: 13px; color: var(--yellow); background: var(--yellow-bg); border: 1px solid rgba(217,119,6,0.2); border-radius: 8px; padding: 7px 12px; margin-bottom: 10px; display: none; }
+
+    .next-btn {
+      width: 100%; padding: 14px; border-radius: 10px; font-size: 15px; font-weight: 600;
+      border: none; cursor: pointer; background: var(--accent); color: #fff;
+      margin-top: 8px; display: none; transition: opacity 0.2s;
+    }
+    .next-btn:hover { opacity: 0.9; }
+    .next-btn.visible { display: block; }
+
+    #feedback { opacity: 0; transition: opacity 0.2s ease; min-height: 1px; }
+    #feedback.visible { opacity: 1; }
+    .feedback-top { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+    .feedback-label { font-size: 12px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; }
+    .feedback-label.correct { color: var(--green); }
+    .feedback-label.incorrect { color: var(--red); }
+    #correct-answer { font-size: 16px; font-weight: 700; color: var(--text); }
+    #explanation { font-size: 13px; color: var(--text-muted); margin-bottom: 4px; line-height: 1.55; }
+
+    .footer { margin-top: 14px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-dim); }
+
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-in { animation: fadeUp 0.22s ease forwards; }
+
+    /* ════ DASHBOARD ════ */
+    #dashboard-page { min-height: 100vh; padding: 80px 24px 40px; }
+    .dash-header { max-width: 860px; margin: 0 auto 24px; }
+    .dash-header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 3px; }
+    .dash-header p { color: var(--text-muted); font-size: 14px; }
+
+    .dash-grid { max-width: 860px; margin: 0 auto 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+    .dash-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 18px 18px 14px; box-shadow: var(--shadow-sm); cursor: pointer; transition: var(--transition);
+    }
+    .dash-card:hover { box-shadow: var(--shadow); border-color: var(--accent); }
+    .dash-card.no-click { cursor: default; }
+    .dash-card.no-click:hover { box-shadow: var(--shadow-sm); border-color: var(--border); }
+    .dash-card-label { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 5px; }
+    .dash-card-value { font-size: 28px; font-weight: 800; letter-spacing: -0.04em; color: var(--text); line-height: 1; }
+    .dash-card-value.accent { color: var(--accent); }
+    .dash-card-value.green { color: var(--green); }
+    .dash-card-value.red { color: var(--red); }
+    .dash-card-value.yellow { color: var(--yellow); }
+    .dash-card-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    .dash-card-arrow { float: right; color: var(--text-dim); font-size: 16px; margin-top: -2px; }
+
+    .dash-section { max-width: 860px; margin: 0 auto 20px; }
+    .dash-section-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; color: var(--text); }
+    .dash-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow-sm); }
+
+    .accuracy-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .accuracy-item { text-align: center; padding: 10px; }
+    .ring-wrap { position: relative; display: inline-block; margin-bottom: 6px; }
+    .ring-wrap svg { transform: rotate(-90deg); }
+    .ring-label { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 15px; font-weight: 800; color: var(--text); }
+    .accuracy-name { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+    .chart-wrap { display: flex; align-items: flex-end; gap: 6px; height: 100px; padding-bottom: 24px; position: relative; }
+    .chart-bar-group { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; height: 100%; justify-content: flex-end; position: relative; }
+    .chart-bars { display: flex; gap: 2px; align-items: flex-end; width: 100%; justify-content: center; }
+    .chart-bar { width: 10px; border-radius: 3px 3px 0 0; min-height: 2px; }
+    .chart-bar.correct-bar { background: var(--green); }
+    .chart-bar.incorrect-bar { background: var(--red); opacity: 0.7; }
+    .chart-label { position: absolute; bottom: -20px; font-size: 10px; color: var(--text-dim); white-space: nowrap; }
+    .chart-legend { display: flex; gap: 16px; margin-top: 30px; font-size: 12px; color: var(--text-muted); }
+    .legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+
+    .streak-row { display: flex; gap: 4px; flex-wrap: wrap; }
+    .streak-day { width: 22px; height: 22px; border-radius: 4px; background: var(--surface2); border: 1px solid var(--border); font-size: 0; position: relative; }
+    .streak-day.studied { background: var(--accent); border-color: var(--accent); }
+    .streak-day.studied-today { background: var(--green); border-color: var(--green); box-shadow: 0 0 0 3px rgba(22,163,74,0.15); }
+
+    /* ════ WORD LIST PAGES ════ */
+    .list-page { min-height: 100vh; padding: 80px 24px 40px; }
+    .list-header { max-width: 700px; margin: 0 auto 20px; display: flex; align-items: center; gap: 12px; }
+    .back-btn {
+      padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 500; cursor: pointer;
+      border: 1.5px solid var(--border); background: var(--surface); color: var(--text-muted); transition: var(--transition);
+    }
+    .back-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .list-header h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+    .list-header-sub { font-size: 13px; color: var(--text-muted); }
+
+    .word-list { max-width: 700px; margin: 0 auto; display: flex; flex-direction: column; gap: 8px; }
+    .word-item {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      padding: 14px 16px; box-shadow: var(--shadow-sm); display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+    }
+    .word-item-left { flex: 1; min-width: 0; }
+    .word-item-sentence { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 2px; word-break: break-word; }
+    .word-item-korean { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+    .word-item-chips { display: flex; gap: 5px; flex-wrap: wrap; }
+    .word-item-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+    .badge { font-size: 11px; font-weight: 700; border-radius: 20px; padding: 2px 9px; white-space: nowrap; }
+    .badge.wrong { background: var(--red-bg); color: var(--red); }
+    .badge.ok { background: var(--green-bg); color: var(--green); }
+    .badge.neutral { background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); }
+
+    .empty-state { text-align: center; padding: 40px 16px; color: var(--text-muted); font-size: 14px; }
+
+    .search-bar {
+      max-width: 700px; margin: 0 auto 14px; display: flex;
+    }
+    .search-bar input {
+      width: 100%; padding: 10px 16px; border: 1.5px solid var(--border); border-radius: 10px;
+      font-size: 14px; font-family: inherit; outline: none; background: var(--surface); color: var(--text);
+      transition: border-color var(--transition);
+    }
+    .search-bar input:focus { border-color: var(--accent); }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <span class="nav-logo">Vocab</span>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showPage('quiz')">퀴즈</button>
+    <button class="nav-tab" onclick="showPage('dashboard')">대시보드</button>
+  </div>
+  <button class="review-btn" id="review-btn" onclick="toggleReviewMode()">복습 모드</button>
+</nav>
+
+<!-- ── Quiz Page ── -->
+<div id="quiz-page" class="page active">
+  <div class="container">
+    <div class="stats-bar">
+      <div class="stats-left">
+        <div class="stat">🔥 <span class="stat-val" id="streak-val">0</span> <span>연속</span></div>
+        <div class="stat"><span style="color:var(--green)">✓</span> <span class="stat-val" id="correct-val">0</span></div>
+        <div class="stat"><span style="color:var(--red)">✗</span> <span class="stat-val" id="incorrect-val">0</span></div>
+      </div>
+      <span class="review-indicator" id="review-indicator">복습 모드</span>
+    </div>
+
+    <div class="card" id="card">
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+
+      <div class="sentence-wrap"><div id="sentence"></div></div>
+      <div id="korean-translation"></div>
+
+      <!-- Word info shown from the start -->
+      <div class="word-info-row" id="word-info-row"></div>
+
+      <div class="attempts-row" id="attempts-row"></div>
+      <div id="hint-text"></div>
+
+      <div class="input-wrap">
+        <input id="answer-input" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="정답을 입력하세요..." />
+        <span class="enter-hint">↵ enter</span>
+      </div>
+
+      <div id="feedback">
+        <div class="feedback-top">
+          <span class="feedback-label" id="feedback-label"></span>
+          <span id="correct-answer"></span>
+        </div>
+        <div id="explanation"></div>
+      </div>
+
+      <button class="next-btn" id="next-btn" onclick="loadNext()">다음 단어 →</button>
+    </div>
+
+    <div class="footer">
+      <span id="queue-info"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ── Dashboard Page ── -->
+<div id="dashboard-page" class="page">
+  <div class="dash-header">
+    <h1>학습 대시보드</h1>
+    <p id="dash-subtitle"></p>
+  </div>
+
+  <div class="dash-grid">
+    <div class="dash-card no-click">
+      <div class="dash-card-label">🔥 연속 학습일</div>
+      <div class="dash-card-value yellow" id="d-streak">0</div>
+      <div class="dash-card-sub">일 연속</div>
+    </div>
+    <div class="dash-card no-click">
+      <div class="dash-card-label">📅 오늘 정답률</div>
+      <div class="dash-card-value green" id="d-today-rate">-</div>
+      <div class="dash-card-sub" id="d-today-sub">아직 없음</div>
+    </div>
+    <div class="dash-card" onclick="showPage('all-words')">
+      <div class="dash-card-label">📚 전체 학습 단어 <span class="dash-card-arrow">›</span></div>
+      <div class="dash-card-value accent" id="d-total-seen">0</div>
+      <div class="dash-card-sub">개 단어 학습 완료</div>
+    </div>
+    <div class="dash-card" onclick="showPage('wrong-words')">
+      <div class="dash-card-label">❌ 틀린 단어 <span class="dash-card-arrow">›</span></div>
+      <div class="dash-card-value red" id="d-wrong-count">0</div>
+      <div class="dash-card-sub">복습 필요</div>
+    </div>
+  </div>
+
+  <div class="dash-section">
+    <div class="dash-section-title">정답률 비교</div>
+    <div class="dash-box">
+      <div class="accuracy-row">
+        <div class="accuracy-item">
+          <div class="ring-wrap">
+            <svg width="80" height="80" viewBox="0 0 80 80">
+              <circle cx="40" cy="40" r="32" fill="none" stroke="#e0e3ef" stroke-width="8"/>
+              <circle cx="40" cy="40" r="32" fill="none" stroke="#16a34a" stroke-width="8"
+                stroke-dasharray="201" stroke-dashoffset="201" id="ring-today" stroke-linecap="round"/>
+            </svg>
+            <span class="ring-label" id="ring-today-label">-%</span>
+          </div>
+          <div class="accuracy-name">오늘</div>
+        </div>
+        <div class="accuracy-item">
+          <div class="ring-wrap">
+            <svg width="80" height="80" viewBox="0 0 80 80">
+              <circle cx="40" cy="40" r="32" fill="none" stroke="#e0e3ef" stroke-width="8"/>
+              <circle cx="40" cy="40" r="32" fill="none" stroke="#4f5ff7" stroke-width="8"
+                stroke-dasharray="201" stroke-dashoffset="201" id="ring-total" stroke-linecap="round"/>
+            </svg>
+            <span class="ring-label" id="ring-total-label">-%</span>
+          </div>
+          <div class="accuracy-name">전체</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dash-section">
+    <div class="dash-section-title">최근 7일 추이</div>
+    <div class="dash-box">
+      <div class="chart-wrap" id="chart-wrap"></div>
+      <div class="chart-legend">
+        <span><span class="legend-dot" style="background:var(--green)"></span>정답</span>
+        <span><span class="legend-dot" style="background:var(--red)"></span>오답</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="dash-section">
+    <div class="dash-section-title">출석 기록 (최근 30일)</div>
+    <div class="dash-box">
+      <div class="streak-row" id="streak-calendar"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Wrong Words Page ── -->
+<div id="wrong-words-page" class="page list-page">
+  <div class="list-header">
+    <button class="back-btn" onclick="showPage('dashboard')">← 뒤로</button>
+    <div>
+      <h2>틀린 단어 모음</h2>
+      <div class="list-header-sub" id="wrong-words-sub"></div>
+    </div>
+  </div>
+  <div class="search-bar"><input id="wrong-search" type="text" placeholder="단어 검색..." oninput="filterWrongWords()" /></div>
+  <div class="word-list" id="wrong-list"></div>
+</div>
+
+<!-- ── All Words Page ── -->
+<div id="all-words-page" class="page list-page">
+  <div class="list-header">
+    <button class="back-btn" onclick="showPage('dashboard')">← 뒤로</button>
+    <div>
+      <h2>전체 학습 단어</h2>
+      <div class="list-header-sub" id="all-words-sub"></div>
+    </div>
+  </div>
+  <div class="search-bar"><input id="all-search" type="text" placeholder="단어 검색..." oninput="filterAllWords()" /></div>
+  <div class="word-list" id="all-list"></div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════
+// DATASET
+// ════════════════════════════════════════════════════════
+const BUILT_IN = [
+  { sentence:"She decided to ___ up smoking after the doctor's advice.", answer:"give", korean:"그녀는 의사의 조언 후 담배를 끊기로 결심했다.", explanation:"'Give up' means to stop doing something.", synonyms:["quit","stop","abandon"], partOfSpeech:"phrasal verb" },
+  { sentence:"He needs to ___ off the meeting until next week.", answer:"put", korean:"그는 회의를 다음 주로 미뤄야 한다.", explanation:"'Put off' means to postpone or delay.", synonyms:["delay","postpone","defer"], partOfSpeech:"phrasal verb" },
+  { sentence:"Can you ___ out what this symbol means?", answer:"figure", korean:"이 기호가 무슨 뜻인지 알아낼 수 있어?", explanation:"'Figure out' means to understand or solve something.", synonyms:["work out","determine","discover"], partOfSpeech:"phrasal verb" },
+  { sentence:"She always ___ up early to go for a run.", answer:"wakes", korean:"그녀는 달리기를 하러 항상 일찍 일어난다.", explanation:"'Wake up' means to stop sleeping.", synonyms:["rises","gets up","stirs"], partOfSpeech:"verb" },
+  { sentence:"They ran ___ of time before finishing the project.", answer:"out", korean:"그들은 프로젝트를 마치기 전에 시간이 다 떨어졌다.", explanation:"'Run out of' means to have no more of something.", synonyms:["exhausted","depleted"], partOfSpeech:"phrasal verb" },
+  { sentence:"He had to ___ up with her rude behavior all day.", answer:"put", korean:"그는 하루 종일 그녀의 무례한 행동을 참아야 했다.", explanation:"'Put up with' means to tolerate something unpleasant.", synonyms:["tolerate","endure","bear"], partOfSpeech:"phrasal verb" },
+  { sentence:"The manager asked her to ___ over the report.", answer:"look", korean:"관리자는 그녀에게 보고서를 검토해 달라고 했다.", explanation:"'Look over' means to review or check something.", synonyms:["review","check","examine"], partOfSpeech:"phrasal verb" },
+  { sentence:"He always ___ up to his older brother.", answer:"looks", korean:"그는 항상 형을 존경한다.", explanation:"'Look up to' means to admire or respect someone.", synonyms:["admires","respects","idolizes"], partOfSpeech:"phrasal verb" },
+  { sentence:"She had to ___ off her vacation because of work.", answer:"call", korean:"그녀는 일 때문에 휴가를 취소해야 했다.", explanation:"'Call off' means to cancel something.", synonyms:["cancel","scrap","abandon"], partOfSpeech:"phrasal verb" },
+  { sentence:"They need to ___ out a plan before the meeting.", answer:"work", korean:"그들은 회의 전에 계획을 세워야 한다.", explanation:"'Work out' means to plan or solve something.", synonyms:["plan","devise","figure out"], partOfSpeech:"phrasal verb" },
+  { sentence:"Can you ___ after my dog this weekend?", answer:"look", korean:"이번 주말에 내 개를 돌봐줄 수 있어?", explanation:"'Look after' means to take care of someone or something.", synonyms:["care for","tend to","watch"], partOfSpeech:"phrasal verb" },
+  { sentence:"He decided to ___ on the new project despite the risks.", answer:"take", korean:"그는 위험에도 불구하고 새 프로젝트를 맡기로 결정했다.", explanation:"'Take on' means to accept a responsibility or challenge.", synonyms:["accept","undertake","tackle"], partOfSpeech:"phrasal verb" },
+  { sentence:"She asked him to ___ back when he had more time.", answer:"call", korean:"그녀는 시간이 생기면 전화해달라고 했다.", explanation:"'Call back' means to return someone's phone call.", synonyms:["return a call","phone back"], partOfSpeech:"phrasal verb" },
+  { sentence:"They need to ___ up for the party tomorrow.", answer:"show", korean:"그들은 내일 파티에 나타나야 한다.", explanation:"'Show up' means to arrive or appear.", synonyms:["appear","arrive","turn up"], partOfSpeech:"phrasal verb" },
+  { sentence:"He tends to ___ off important tasks until the last minute.", answer:"put", korean:"그는 중요한 일들을 마지막 순간까지 미루는 경향이 있다.", explanation:"'Put off' means to delay doing something.", synonyms:["delay","procrastinate","defer"], partOfSpeech:"phrasal verb" },
+  { sentence:"Can you ___ on the lights? It's getting dark.", answer:"turn", korean:"불 좀 켜줄 수 있어? 어두워지고 있어.", explanation:"'Turn on' means to switch something on.", synonyms:["switch on","activate","flip on"], partOfSpeech:"phrasal verb" },
+  { sentence:"She had to ___ with a difficult colleague for months.", answer:"deal", korean:"그녀는 몇 달 동안 어려운 동료를 상대해야 했다.", explanation:"'Deal with' means to handle or manage a situation.", synonyms:["handle","manage","cope with"], partOfSpeech:"phrasal verb" },
+  { sentence:"He always ___ in his assignments on time.", answer:"hands", korean:"그는 항상 과제를 제때 제출한다.", explanation:"'Hand in' means to submit something.", synonyms:["submits","turns in","delivers"], partOfSpeech:"phrasal verb" },
+  { sentence:"They decided to ___ off the trip due to bad weather.", answer:"call", korean:"그들은 나쁜 날씨 때문에 여행을 취소하기로 했다.", explanation:"'Call off' means to cancel an event.", synonyms:["cancel","scrap","abort"], partOfSpeech:"phrasal verb" },
+  { sentence:"She asked him to ___ up the music a bit.", answer:"turn", korean:"그녀는 음악 소리를 좀 높여달라고 했다.", explanation:"'Turn up' means to increase the volume or level.", synonyms:["raise","increase","crank up"], partOfSpeech:"phrasal verb" },
+  { sentence:"He couldn't ___ out why the plan had failed.", answer:"figure", korean:"그는 왜 계획이 실패했는지 이해할 수 없었다.", explanation:"'Figure out' means to understand or discover something.", synonyms:["work out","understand","determine"], partOfSpeech:"phrasal verb" },
+  { sentence:"Please ___ down the TV — I'm trying to sleep.", answer:"turn", korean:"TV 소리 좀 줄여줘 — 자려고 하잖아.", explanation:"'Turn down' means to reduce the volume.", synonyms:["lower","reduce","decrease"], partOfSpeech:"phrasal verb" },
+  { sentence:"She had to ___ over her presentation three times.", answer:"go", korean:"그녀는 발표를 세 번 검토해야 했다.", explanation:"'Go over' means to review or rehearse something.", synonyms:["review","rehearse","look over"], partOfSpeech:"phrasal verb" },
+  { sentence:"He was asked to ___ in for his sick colleague.", answer:"fill", korean:"그는 아픈 동료를 대신하도록 요청받았다.", explanation:"'Fill in' means to substitute for someone.", synonyms:["substitute","cover","stand in"], partOfSpeech:"phrasal verb" },
+  { sentence:"She needed to ___ up courage before the speech.", answer:"work", korean:"그녀는 연설 전에 용기를 끌어올려야 했다.", explanation:"'Work up' means to build or develop something gradually.", synonyms:["build up","muster","summon"], partOfSpeech:"phrasal verb" },
+  { sentence:"They had to ___ down the offer because it was too low.", answer:"turn", korean:"그들은 그 제안이 너무 낮아서 거절해야 했다.", explanation:"'Turn down' means to reject an offer.", synonyms:["reject","decline","refuse"], partOfSpeech:"phrasal verb" },
+  { sentence:"He asked her to ___ on while he made coffee.", answer:"hold", korean:"그는 커피를 만드는 동안 기다려달라고 했다.", explanation:"'Hold on' means to wait.", synonyms:["wait","hang on","pause"], partOfSpeech:"phrasal verb" },
+  { sentence:"She decided to ___ out of the deal at the last moment.", answer:"back", korean:"그녀는 마지막 순간에 거래에서 발을 빼기로 결심했다.", explanation:"'Back out' means to withdraw from an agreement.", synonyms:["withdraw","pull out","retreat"], partOfSpeech:"phrasal verb" },
+  { sentence:"Can you ___ up for yourself in difficult situations?", answer:"stand", korean:"어려운 상황에서 자신을 지킬 수 있어?", explanation:"'Stand up for' means to defend or support someone.", synonyms:["defend","support","advocate"], partOfSpeech:"phrasal verb" },
+  { sentence:"He needs to ___ through all the documents.", answer:"go", korean:"그는 모든 서류를 검토해야 한다.", explanation:"'Go through' means to examine carefully.", synonyms:["examine","review","check"], partOfSpeech:"phrasal verb" },
+  { sentence:"She had to ___ off steam after the stressful meeting.", answer:"let", korean:"그녀는 스트레스받은 회의 후 스트레스를 풀어야 했다.", explanation:"'Let off steam' means to release built-up emotions or stress.", synonyms:["vent","release","unwind"], partOfSpeech:"idiom" },
+  { sentence:"He always ___ into account everyone's opinion.", answer:"takes", korean:"그는 항상 모든 사람의 의견을 고려한다.", explanation:"'Take into account' means to consider something.", synonyms:["considers","factors in","accounts for"], partOfSpeech:"phrasal verb" },
+  { sentence:"They decided to ___ ahead with the original plan.", answer:"go", korean:"그들은 원래 계획대로 진행하기로 결정했다.", explanation:"'Go ahead' means to proceed with something.", synonyms:["proceed","continue","move forward"], partOfSpeech:"phrasal verb" },
+  { sentence:"She asked him to ___ in touch more often.", answer:"keep", korean:"그녀는 그에게 더 자주 연락하라고 했다.", explanation:"'Keep in touch' means to stay in contact.", synonyms:["stay connected","maintain contact"], partOfSpeech:"idiom" },
+  { sentence:"He had to ___ up to the consequences of his actions.", answer:"face", korean:"그는 자신의 행동에 대한 결과를 직시해야 했다.", explanation:"'Face up to' means to accept and deal with something difficult.", synonyms:["confront","accept","acknowledge"], partOfSpeech:"phrasal verb" },
+  { sentence:"They need to ___ out the budget carefully.", answer:"work", korean:"그들은 예산을 신중하게 계획해야 한다.", explanation:"'Work out' means to calculate or plan something.", synonyms:["calculate","plan","figure out"], partOfSpeech:"phrasal verb" },
+  { sentence:"She couldn't ___ out the name on the blurry photo.", answer:"make", korean:"그녀는 흐릿한 사진 속 이름을 알아볼 수 없었다.", explanation:"'Make out' means to distinguish or understand something.", synonyms:["distinguish","decipher","identify"], partOfSpeech:"phrasal verb" },
+  { sentence:"He decided to ___ away from social media for a week.", answer:"stay", korean:"그는 일주일 동안 소셜 미디어를 멀리하기로 결심했다.", explanation:"'Stay away from' means to avoid something.", synonyms:["avoid","keep away from","steer clear of"], partOfSpeech:"phrasal verb" },
+  { sentence:"She had to ___ back her tears during the movie.", answer:"hold", korean:"그녀는 영화 중에 눈물을 참아야 했다.", explanation:"'Hold back' means to restrain or suppress something.", synonyms:["restrain","suppress","contain"], partOfSpeech:"phrasal verb" },
+  { sentence:"He asked his boss for a ___ in pay.", answer:"raise", korean:"그는 상사에게 임금 인상을 요청했다.", explanation:"A 'raise' means an increase in salary.", synonyms:["increase","hike","boost"], partOfSpeech:"noun" },
+  { sentence:"They had to ___ through difficult times together.", answer:"get", korean:"그들은 함께 어려운 시간을 헤쳐나가야 했다.", explanation:"'Get through' means to survive or endure a hard period.", synonyms:["survive","endure","overcome"], partOfSpeech:"phrasal verb" },
+  { sentence:"She decided to ___ up painting as a hobby.", answer:"take", korean:"그녀는 취미로 그림을 시작하기로 결심했다.", explanation:"'Take up' means to start a new hobby or activity.", synonyms:["start","begin","pick up"], partOfSpeech:"phrasal verb" },
+  { sentence:"She agreed to ___ out the contract carefully.", answer:"check", korean:"그녀는 계약서를 꼼꼼히 검토하기로 했다.", explanation:"'Check out' means to examine or review something.", synonyms:["examine","review","look over"], partOfSpeech:"phrasal verb" },
+  { sentence:"They need to ___ up with a better solution.", answer:"come", korean:"그들은 더 나은 해결책을 생각해 내야 한다.", explanation:"'Come up with' means to think of or create an idea.", synonyms:["devise","create","think of"], partOfSpeech:"phrasal verb" },
+  { sentence:"He tried to ___ off the subject with a joke.", answer:"brush", korean:"그는 농담으로 그 주제를 가볍게 넘기려 했다.", explanation:"'Brush off' means to dismiss something casually.", synonyms:["dismiss","shrug off","ignore"], partOfSpeech:"phrasal verb" },
+  { sentence:"She had to ___ down for a nap after lunch.", answer:"lie", korean:"그녀는 점심 후 낮잠을 자러 누워야 했다.", explanation:"'Lie down' means to recline or rest horizontally.", synonyms:["recline","rest","stretch out"], partOfSpeech:"phrasal verb" },
+  { sentence:"He always ___ out the best in people.", answer:"brings", korean:"그는 항상 사람들의 가장 좋은 면을 이끌어낸다.", explanation:"'Bring out' means to reveal or highlight a quality.", synonyms:["reveals","highlights","draws out"], partOfSpeech:"phrasal verb" },
+  { sentence:"They decided to ___ up the old house and sell it.", answer:"do", korean:"그들은 낡은 집을 수리해서 팔기로 했다.", explanation:"'Do up' means to renovate or repair something.", synonyms:["renovate","repair","refurbish"], partOfSpeech:"phrasal verb" },
+  { sentence:"He made a ___ to arrive on time every day.", answer:"point", korean:"그는 매일 제시간에 도착하려고 의식적으로 노력했다.", explanation:"'Make a point of' means to do something deliberately.", synonyms:["effort","priority"], partOfSpeech:"noun" },
+  { sentence:"She had to ___ the news in gently.", answer:"break", korean:"그녀는 소식을 부드럽게 전해야 했다.", explanation:"'Break the news' means to tell someone something important.", synonyms:["announce","deliver","share"], partOfSpeech:"idiom" },
+  { sentence:"He couldn't ___ up his mind about which job to take.", answer:"make", korean:"그는 어떤 직업을 선택할지 결정할 수 없었다.", explanation:"'Make up one's mind' means to decide something.", synonyms:["decide","determine","choose"], partOfSpeech:"idiom" },
+  { sentence:"They need to ___ up on the latest developments.", answer:"catch", korean:"그들은 최신 동향을 파악해야 한다.", explanation:"'Catch up on' means to learn about recent events.", synonyms:["update","refresh","get up to speed"], partOfSpeech:"phrasal verb" },
+  { sentence:"She decided to ___ a stand against the unfair policy.", answer:"take", korean:"그녀는 불공정한 정책에 맞서 입장을 표명하기로 결심했다.", explanation:"'Take a stand' means to defend a position firmly.", synonyms:["oppose","resist","assert"], partOfSpeech:"idiom" },
+  { sentence:"He had to ___ over the shock of losing his job.", answer:"get", korean:"그는 실직의 충격에서 회복해야 했다.", explanation:"'Get over' means to recover from something difficult.", synonyms:["recover from","overcome","move past"], partOfSpeech:"phrasal verb" },
+  { sentence:"She always ___ in mind that details matter.", answer:"keeps", korean:"그녀는 항상 세부사항이 중요하다는 것을 명심한다.", explanation:"'Keep in mind' means to remember something.", synonyms:["remembers","bears in mind","notes"], partOfSpeech:"phrasal verb" },
+  { sentence:"They had to ___ back on spending to save money.", answer:"cut", korean:"그들은 돈을 절약하기 위해 지출을 줄여야 했다.", explanation:"'Cut back on' means to reduce the amount of something.", synonyms:["reduce","decrease","curb"], partOfSpeech:"phrasal verb" },
+  { sentence:"He asked her to ___ down her thoughts on paper.", answer:"put", korean:"그는 그녀에게 생각을 종이에 써달라고 했다.", explanation:"'Put down' means to write or record something.", synonyms:["write down","jot down","note"], partOfSpeech:"phrasal verb" },
+  { sentence:"She managed to ___ across her point clearly.", answer:"get", korean:"그녀는 자신의 요점을 명확하게 전달했다.", explanation:"'Get across' means to communicate something successfully.", synonyms:["communicate","convey","express"], partOfSpeech:"phrasal verb" },
+  { sentence:"He couldn't ___ out why she was upset.", answer:"work", korean:"그는 그녀가 왜 화났는지 이해할 수 없었다.", explanation:"'Work out' means to determine or understand something.", synonyms:["figure out","determine","understand"], partOfSpeech:"phrasal verb" },
+  { sentence:"They decided to ___ in early and start fresh.", answer:"turn", korean:"그들은 일찍 잠자리에 들고 새로 시작하기로 했다.", explanation:"'Turn in' means to go to bed or sleep.", synonyms:["go to bed","retire","hit the sack"], partOfSpeech:"phrasal verb" },
+  { sentence:"She asked the waiter to ___ away her empty plate.", answer:"take", korean:"그녀는 웨이터에게 빈 접시를 치워달라고 했다.", explanation:"'Take away' means to remove something.", synonyms:["remove","clear","carry off"], partOfSpeech:"phrasal verb" },
+  { sentence:"He had to ___ down his pride and ask for help.", answer:"swallow", korean:"그는 자존심을 누르고 도움을 구해야 했다.", explanation:"'Swallow one's pride' means to do something humble despite ego.", synonyms:["suppress","overcome","set aside"], partOfSpeech:"idiom" },
+  { sentence:"They ran ___ each other at the airport.", answer:"into", korean:"그들은 공항에서 우연히 마주쳤다.", explanation:"'Run into' means to meet someone unexpectedly.", synonyms:["bumped into","encountered","met"], partOfSpeech:"phrasal verb" },
+  { sentence:"He needs to ___ up on his reading before the exam.", answer:"catch", korean:"그는 시험 전에 읽기를 따라잡아야 한다.", explanation:"'Catch up on' means to complete something you fell behind on.", synonyms:["update","complete","make up for"], partOfSpeech:"phrasal verb" },
+  { sentence:"She had to ___ down her expectations a little.", answer:"lower", korean:"그녀는 기대치를 조금 낮춰야 했다.", explanation:"'Lower expectations' means to be less demanding or optimistic.", synonyms:["reduce","decrease","temper"], partOfSpeech:"verb" },
+  { sentence:"He was asked to ___ on the project next month.", answer:"take", korean:"그는 다음 달에 프로젝트를 맡아달라는 요청을 받았다.", explanation:"'Take on' means to accept a new task or responsibility.", synonyms:["accept","undertake","assume"], partOfSpeech:"phrasal verb" },
+  { sentence:"They had to ___ up the tent before it got dark.", answer:"set", korean:"그들은 어두워지기 전에 텐트를 설치해야 했다.", explanation:"'Set up' means to prepare or assemble something.", synonyms:["erect","assemble","pitch"], partOfSpeech:"phrasal verb" },
+  { sentence:"She needed to ___ in a request for vacation time.", answer:"put", korean:"그녀는 휴가 요청서를 제출해야 했다.", explanation:"'Put in' means to submit or make a formal request.", synonyms:["submit","file","lodge"], partOfSpeech:"phrasal verb" },
+  { sentence:"He decided to ___ out the competition himself.", answer:"check", korean:"그는 직접 경쟁사를 알아보기로 했다.", explanation:"'Check out' means to investigate or observe something.", synonyms:["investigate","examine","assess"], partOfSpeech:"phrasal verb" },
+  { sentence:"She had to ___ up with an excuse for being late.", answer:"come", korean:"그녀는 늦은 것에 대한 핑계를 생각해야 했다.", explanation:"'Come up with' means to think of something quickly.", synonyms:["invent","devise","think of"], partOfSpeech:"phrasal verb" },
+  { sentence:"They need to ___ down the facts before arguing.", answer:"get", korean:"그들은 논쟁 전에 사실 관계를 파악해야 한다.", explanation:"'Get down' means to record or establish the facts.", synonyms:["establish","record","determine"], partOfSpeech:"phrasal verb" },
+  { sentence:"He asked her to ___ through the report one more time.", answer:"go", korean:"그는 그녀에게 보고서를 한 번 더 검토해달라고 했다.", explanation:"'Go through' means to review or examine carefully.", synonyms:["review","examine","check"], partOfSpeech:"phrasal verb" },
+  { sentence:"She decided to ___ on a new challenge this year.", answer:"take", korean:"그녀는 올해 새로운 도전을 시작하기로 했다.", explanation:"'Take on' means to undertake something new.", synonyms:["undertake","start","embrace"], partOfSpeech:"phrasal verb" },
+  { sentence:"He always ___ time to help his friends.", answer:"makes", korean:"그는 항상 친구들을 도울 시간을 낸다.", explanation:"'Make time' means to arrange to have free time for something.", synonyms:["finds time","sets aside time"], partOfSpeech:"idiom" },
+  { sentence:"She had to ___ aside her personal feelings.", answer:"set", korean:"그녀는 개인적인 감정을 제쳐두어야 했다.", explanation:"'Set aside' means to ignore or reserve something temporarily.", synonyms:["put aside","ignore","disregard"], partOfSpeech:"phrasal verb" },
+  { sentence:"They decided to ___ out the old furniture.", answer:"throw", korean:"그들은 낡은 가구를 버리기로 했다.", explanation:"'Throw out' means to discard something.", synonyms:["discard","dispose of","get rid of"], partOfSpeech:"phrasal verb" },
+  { sentence:"He managed to ___ through the final presentation.", answer:"get", korean:"그는 마지막 발표를 어떻게든 해냈다.", explanation:"'Get through' means to finish or endure something.", synonyms:["complete","endure","survive"], partOfSpeech:"phrasal verb" },
+  { sentence:"She asked him to ___ into account the extra costs.", answer:"take", korean:"그녀는 그에게 추가 비용을 고려해달라고 했다.", explanation:"'Take into account' means to consider something.", synonyms:["consider","factor in","account for"], partOfSpeech:"phrasal verb" },
+  { sentence:"He had to ___ up with a plan on short notice.", answer:"come", korean:"그는 촉박하게 계획을 생각해야 했다.", explanation:"'Come up with' means to create or invent something.", synonyms:["devise","create","produce"], partOfSpeech:"phrasal verb" },
+  { sentence:"They need to ___ down the costs for the project.", answer:"cut", korean:"그들은 프로젝트 비용을 줄여야 한다.", explanation:"'Cut down' means to reduce something.", synonyms:["reduce","trim","decrease"], partOfSpeech:"phrasal verb" },
+  { sentence:"She tried to ___ back on coffee to sleep better.", answer:"cut", korean:"그녀는 더 잘 자려고 커피를 줄이려 했다.", explanation:"'Cut back on' means to reduce the amount of something consumed.", synonyms:["reduce","limit","decrease"], partOfSpeech:"phrasal verb" },
+  { sentence:"She had to ___ on a brave face despite her fear.", answer:"put", korean:"그녀는 두려움에도 불구하고 용감한 척해야 했다.", explanation:"'Put on a brave face' means to appear confident when afraid.", synonyms:["pretend","feign","mask"], partOfSpeech:"idiom" },
+  { sentence:"He decided to ___ over the old documents carefully.", answer:"go", korean:"그는 오래된 서류들을 꼼꼼히 검토하기로 했다.", explanation:"'Go over' means to review or examine something.", synonyms:["review","examine","check"], partOfSpeech:"phrasal verb" },
+  { sentence:"They had to ___ out the details before signing.", answer:"iron", korean:"그들은 서명 전에 세부사항을 해결해야 했다.", explanation:"'Iron out' means to resolve difficulties or disagreements.", synonyms:["resolve","work out","sort out"], partOfSpeech:"phrasal verb" },
+  { sentence:"She asked him to ___ off his phone during dinner.", answer:"turn", korean:"그녀는 저녁식사 중에 전화기를 꺼달라고 했다.", explanation:"'Turn off' means to deactivate or switch something off.", synonyms:["switch off","deactivate","shut off"], partOfSpeech:"phrasal verb" },
+  { sentence:"He could not ___ out how to fix the bug.", answer:"figure", korean:"그는 버그를 어떻게 고칠지 알아낼 수 없었다.", explanation:"'Figure out' means to find the answer to a problem.", synonyms:["determine","discover","solve"], partOfSpeech:"phrasal verb" },
+  { sentence:"They decided to ___ away with the old policy.", answer:"do", korean:"그들은 오래된 정책을 폐지하기로 했다.", explanation:"'Do away with' means to abolish or get rid of something.", synonyms:["abolish","eliminate","remove"], partOfSpeech:"phrasal verb" },
+  { sentence:"He asked her to ___ him in on what happened.", answer:"fill", korean:"그는 그녀에게 무슨 일이 있었는지 알려달라고 했다.", explanation:"'Fill in' means to inform someone of missed details.", synonyms:["inform","update","brief"], partOfSpeech:"phrasal verb" },
+  { sentence:"She needs to ___ forward and accept the challenge.", answer:"step", korean:"그녀는 앞으로 나서서 도전을 받아들여야 한다.", explanation:"'Step forward' means to volunteer or take initiative.", synonyms:["volunteer","come forward","advance"], partOfSpeech:"phrasal verb" },
+  { sentence:"They need to ___ out a solution by Friday.", answer:"figure", korean:"그들은 금요일까지 해결책을 찾아내야 한다.", explanation:"'Figure out' means to find the answer to something.", synonyms:["find","determine","discover"], partOfSpeech:"phrasal verb" },
+  { sentence:"She decided to ___ ahead with her travel plans.", answer:"go", korean:"그녀는 여행 계획대로 진행하기로 했다.", explanation:"'Go ahead' means to proceed despite potential obstacles.", synonyms:["proceed","continue","push forward"], partOfSpeech:"phrasal verb" },
+  { sentence:"She had to ___ on through the difficult chapter.", answer:"read", korean:"그녀는 어려운 챕터를 계속 읽어나가야 했다.", explanation:"'Read on' means to continue reading.", synonyms:["continue reading","press on"], partOfSpeech:"phrasal verb" },
+  { sentence:"They managed to ___ out of debt after two years.", answer:"get", korean:"그들은 2년 만에 빚을 다 갚았다.", explanation:"'Get out of debt' means to eliminate financial obligations.", synonyms:["clear debt","pay off","become debt-free"], partOfSpeech:"phrasal verb" },
+  { sentence:"He needs to ___ up on his technical skills.", answer:"brush", korean:"그는 기술적 역량을 다듬어야 한다.", explanation:"'Brush up on' means to improve or review a skill.", synonyms:["refresh","polish","improve"], partOfSpeech:"phrasal verb" },
+  { sentence:"She decided to ___ behind the negativity.", answer:"leave", korean:"그녀는 부정적인 생각을 뒤로 하기로 결심했다.", explanation:"'Leave behind' means to abandon something in the past.", synonyms:["abandon","discard","move past"], partOfSpeech:"phrasal verb" },
+  { sentence:"He had to ___ out his priorities for the year.", answer:"sort", korean:"그는 올해의 우선순위를 정리해야 했다.", explanation:"'Sort out' means to organize or resolve something.", synonyms:["organize","arrange","resolve"], partOfSpeech:"phrasal verb" },
+  { sentence:"They decided to ___ on a new strategy.", answer:"settle", korean:"그들은 새로운 전략을 채택하기로 했다.", explanation:"'Settle on' means to choose or decide on something.", synonyms:["decide on","choose","opt for"], partOfSpeech:"phrasal verb" },
+  { sentence:"She had to ___ up for what she believed in.", answer:"stand", korean:"그녀는 자신이 믿는 것을 지지해야 했다.", explanation:"'Stand up for' means to defend a position or person.", synonyms:["defend","advocate","support"], partOfSpeech:"phrasal verb" },
+  { sentence:"He asked her to ___ through the contract terms.", answer:"go", korean:"그는 그녀에게 계약 조건을 검토해달라고 했다.", explanation:"'Go through' means to examine or review something carefully.", synonyms:["examine","review","check"], partOfSpeech:"phrasal verb" },
+  { sentence:"She couldn't ___ up with the noise next door.", answer:"put", korean:"그녀는 옆집 소음을 참을 수 없었다.", explanation:"'Put up with' means to tolerate something annoying.", synonyms:["tolerate","endure","stand"], partOfSpeech:"phrasal verb" },
+  { sentence:"He decided to ___ things over before responding.", answer:"think", korean:"그는 응답하기 전에 신중하게 생각하기로 했다.", explanation:"'Think over' means to consider something carefully.", synonyms:["consider","ponder","deliberate"], partOfSpeech:"phrasal verb" },
+  { sentence:"They need to ___ back on salt for health reasons.", answer:"cut", korean:"그들은 건강상 이유로 소금 섭취를 줄여야 한다.", explanation:"'Cut back on' means to reduce the amount used.", synonyms:["reduce","limit","decrease"], partOfSpeech:"phrasal verb" },
+  { sentence:"She had to ___ apart the argument logically.", answer:"take", korean:"그녀는 논거를 논리적으로 분석해야 했다.", explanation:"'Take apart' means to analyze or deconstruct something.", synonyms:["analyze","deconstruct","dissect"], partOfSpeech:"phrasal verb" },
+  { sentence:"They had to ___ down to business immediately.", answer:"get", korean:"그들은 즉시 일에 착수해야 했다.", explanation:"'Get down to business' means to start working seriously.", synonyms:["start","begin","focus"], partOfSpeech:"idiom" },
+  { sentence:"She managed to ___ through the tedious paperwork.", answer:"get", korean:"그녀는 지루한 서류 작업을 어떻게든 해냈다.", explanation:"'Get through' means to complete something difficult.", synonyms:["complete","finish","endure"], partOfSpeech:"phrasal verb" },
+  { sentence:"He was trying to ___ into a new routine.", answer:"settle", korean:"그는 새로운 루틴에 적응하려고 하고 있었다.", explanation:"'Settle into' means to become comfortable with something new.", synonyms:["adapt to","adjust to","get used to"], partOfSpeech:"phrasal verb" },
+  { sentence:"She had to ___ up her act to keep the job.", answer:"clean", korean:"그녀는 직업을 유지하기 위해 행동을 고쳐야 했다.", explanation:"'Clean up one's act' means to improve behavior or performance.", synonyms:["improve","reform","shape up"], partOfSpeech:"idiom" },
+  { sentence:"He decided to ___ down his notes after the lecture.", answer:"write", korean:"그는 강의 후 노트를 받아 적기로 했다.", explanation:"'Write down' means to record something on paper.", synonyms:["record","jot down","note"], partOfSpeech:"phrasal verb" },
+  { sentence:"They need to ___ out who is responsible.", answer:"find", korean:"그들은 누가 책임자인지 알아내야 한다.", explanation:"'Find out' means to discover or determine something.", synonyms:["discover","determine","learn"], partOfSpeech:"phrasal verb" },
+  { sentence:"He had to ___ up the nerve to ask her out.", answer:"work", korean:"그는 그녀에게 데이트 신청을 할 용기를 내야 했다.", explanation:"'Work up the nerve' means to gather enough courage to do something.", synonyms:["muster courage","gather nerve","summon courage"], partOfSpeech:"idiom" },
+  { sentence:"She decided to ___ back from the project.", answer:"step", korean:"그녀는 프로젝트에서 한 발 물러서기로 했다.", explanation:"'Step back' means to disengage or gain perspective.", synonyms:["withdraw","distance","disengage"], partOfSpeech:"phrasal verb" },
+  { sentence:"He decided to ___ in on the group project.", answer:"pitch", korean:"그는 그룹 프로젝트에 기여하기로 했다.", explanation:"'Pitch in' means to contribute or help with a shared effort.", synonyms:["contribute","help","assist"], partOfSpeech:"phrasal verb" },
+  { sentence:"They managed to ___ off a surprise party for her.", answer:"pull", korean:"그들은 그녀를 위해 깜짝 파티를 성공적으로 열었다.", explanation:"'Pull off' means to successfully accomplish something difficult.", synonyms:["accomplish","achieve","execute"], partOfSpeech:"phrasal verb" },
+  { sentence:"She had to ___ out a complaint with the manager.", answer:"file", korean:"그녀는 관리자에게 공식 민원을 제기해야 했다.", explanation:"'File a complaint' means to formally submit a grievance.", synonyms:["submit","lodge","register"], partOfSpeech:"verb" },
+  { sentence:"He was trying to ___ on to his old habits.", answer:"hold", korean:"그는 예전 습관을 유지하려 하고 있었다.", explanation:"'Hold on to' means to keep or maintain something.", synonyms:["maintain","keep","retain"], partOfSpeech:"phrasal verb" },
+  { sentence:"She decided to ___ through with the plan despite doubt.", answer:"follow", korean:"그녀는 의심에도 불구하고 계획대로 진행하기로 했다.", explanation:"'Follow through' means to complete what you started.", synonyms:["complete","see through","finish"], partOfSpeech:"phrasal verb" },
+  { sentence:"They need to ___ out who leaked the information.", answer:"find", korean:"그들은 누가 정보를 유출했는지 알아내야 한다.", explanation:"'Find out' means to discover something.", synonyms:["discover","determine","uncover"], partOfSpeech:"phrasal verb" },
+  { sentence:"He had to ___ back his schedule by a week.", answer:"push", korean:"그는 일정을 일주일 뒤로 미뤄야 했다.", explanation:"'Push back' means to delay something to a later time.", synonyms:["delay","postpone","reschedule"], partOfSpeech:"phrasal verb" },
+  { sentence:"She decided to ___ in the towel after many setbacks.", answer:"throw", korean:"그녀는 많은 좌절 끝에 포기하기로 했다.", explanation:"'Throw in the towel' means to give up or quit.", synonyms:["give up","quit","surrender"], partOfSpeech:"idiom" },
+  { sentence:"He was trying to ___ off the debt he owed.", answer:"pay", korean:"그는 빚을 갚으려 하고 있었다.", explanation:"'Pay off' means to repay money that is owed.", synonyms:["repay","settle","clear"], partOfSpeech:"phrasal verb" },
+  { sentence:"She had to ___ off from the crowd to think.", answer:"break", korean:"그녀는 생각하기 위해 군중에서 벗어나야 했다.", explanation:"'Break off' means to separate or detach from something.", synonyms:["separate","detach","distance"], partOfSpeech:"phrasal verb" },
+  { sentence:"He asked her to ___ down and relax for a while.", answer:"sit", korean:"그는 그녀에게 잠시 앉아서 쉬라고 했다.", explanation:"'Sit down' means to take a seat or stop being active.", synonyms:["rest","relax","take a seat"], partOfSpeech:"phrasal verb" },
+  { sentence:"They need to ___ up their resources to succeed.", answer:"pool", korean:"그들은 성공하기 위해 자원을 합쳐야 한다.", explanation:"'Pool resources' means to combine efforts or assets.", synonyms:["combine","share","consolidate"], partOfSpeech:"verb" },
+  { sentence:"She managed to ___ out of a difficult situation.", answer:"talk", korean:"그녀는 어려운 상황에서 빠져나오도록 설득했다.", explanation:"'Talk out of' means to persuade someone not to do something.", synonyms:["persuade","dissuade","convince"], partOfSpeech:"phrasal verb" },
+  { sentence:"He couldn't ___ down from his position in the debate.", answer:"back", korean:"그는 토론에서 자신의 입장을 굽히지 않았다.", explanation:"'Back down' means to withdraw from an argument or stance.", synonyms:["retreat","yield","concede"], partOfSpeech:"phrasal verb" },
+  { sentence:"She had to ___ out her schedule for next month.", answer:"plan", korean:"그녀는 다음 달 일정을 계획해야 했다.", explanation:"'Plan out' means to organize in detail.", synonyms:["organize","schedule","arrange"], partOfSpeech:"phrasal verb" },
+  { sentence:"He decided to ___ forward with the presentation.", answer:"move", korean:"그는 발표를 진행하기로 결정했다.", explanation:"'Move forward' means to continue or make progress.", synonyms:["proceed","advance","continue"], partOfSpeech:"phrasal verb" },
+  { sentence:"They need to ___ out the details before the deadline.", answer:"sort", korean:"그들은 마감 전에 세부사항을 정리해야 한다.", explanation:"'Sort out' means to resolve or organize something.", synonyms:["resolve","organize","settle"], partOfSpeech:"phrasal verb" },
+  { sentence:"He tried to ___ in the situation without making it worse.", answer:"step", korean:"그는 상황을 악화시키지 않고 개입하려 했다.", explanation:"'Step in' means to intervene in a situation.", synonyms:["intervene","mediate","get involved"], partOfSpeech:"phrasal verb" },
+  { sentence:"She always ___ an eye out for new opportunities.", answer:"keeps", korean:"그녀는 항상 새로운 기회를 주시한다.", explanation:"'Keep an eye out' means to watch carefully for something.", synonyms:["watches","looks out","scouts"], partOfSpeech:"idiom" },
+  { sentence:"He had to ___ out his priorities quickly.", answer:"sort", korean:"그는 빠르게 우선순위를 정리해야 했다.", explanation:"'Sort out' means to organize or decide on something.", synonyms:["organize","prioritize","arrange"], partOfSpeech:"phrasal verb" },
+  { sentence:"They managed to ___ away the threat quickly.", answer:"scare", korean:"그들은 위협을 빠르게 쫓아냈다.", explanation:"'Scare away' means to frighten someone into leaving.", synonyms:["chase away","drive off","frighten off"], partOfSpeech:"phrasal verb" },
+  { sentence:"She couldn't ___ down from the position she had taken.", answer:"back", korean:"그녀는 자신이 취한 입장에서 물러설 수 없었다.", explanation:"'Back down' means to withdraw from a stance under pressure.", synonyms:["retreat","yield","relent"], partOfSpeech:"phrasal verb" },
+  { sentence:"He needed to ___ in the necessary paperwork.", answer:"fill", korean:"그는 필요한 서류를 작성해야 했다.", explanation:"'Fill in' means to complete required documents.", synonyms:["complete","fill out","submit"], partOfSpeech:"phrasal verb" },
+  { sentence:"She had to ___ around to find the best option.", answer:"shop", korean:"그녀는 최선의 선택을 찾기 위해 여기저기 알아봐야 했다.", explanation:"'Shop around' means to compare options before choosing.", synonyms:["compare","browse","look around"], partOfSpeech:"phrasal verb" },
+  { sentence:"He decided to ___ back on unnecessary expenses.", answer:"cut", korean:"그는 불필요한 지출을 줄이기로 결심했다.", explanation:"'Cut back on' means to reduce spending or usage.", synonyms:["reduce","trim","decrease"], partOfSpeech:"phrasal verb" },
+  { sentence:"They need to ___ through their differences eventually.", answer:"work", korean:"그들은 결국 서로의 차이를 극복해야 한다.", explanation:"'Work through' means to resolve problems or conflicts.", synonyms:["resolve","overcome","settle"], partOfSpeech:"phrasal verb" },
+  { sentence:"She had to ___ up to the reality of the situation.", answer:"wake", korean:"그녀는 상황의 현실을 직시해야 했다.", explanation:"'Wake up to' means to become aware of a truth.", synonyms:["realize","acknowledge","recognize"], partOfSpeech:"phrasal verb" },
+  { sentence:"He asked her to ___ off until he was ready.", answer:"hold", korean:"그는 그녀에게 준비될 때까지 기다려달라고 했다.", explanation:"'Hold off' means to wait or delay an action.", synonyms:["wait","pause","delay"], partOfSpeech:"phrasal verb" },
+  { sentence:"She decided to ___ into the new role gradually.", answer:"ease", korean:"그녀는 새로운 역할에 서서히 적응하기로 했다.", explanation:"'Ease into' means to transition slowly into something.", synonyms:["transition","adjust","settle"], partOfSpeech:"phrasal verb" },
+  { sentence:"He had to ___ out the noise to concentrate.", answer:"block", korean:"그는 집중하기 위해 소음을 차단해야 했다.", explanation:"'Block out' means to ignore or suppress distractions.", synonyms:["shut out","filter out","ignore"], partOfSpeech:"phrasal verb" },
+  { sentence:"She needed to ___ off steam after the argument.", answer:"let", korean:"그녀는 말다툼 후 스트레스를 풀어야 했다.", explanation:"'Let off steam' means to release built-up frustration.", synonyms:["vent","release","unwind"], partOfSpeech:"idiom" },
+  { sentence:"They need to ___ out a policy for the new staff.", answer:"draw", korean:"그들은 신입 직원을 위한 정책을 작성해야 한다.", explanation:"'Draw out' means to create or formulate something.", synonyms:["formulate","draft","create"], partOfSpeech:"phrasal verb" },
+  { sentence:"She couldn't ___ off the persistent salesperson.", answer:"shake", korean:"그녀는 끈질긴 영업사원을 뿌리칠 수 없었다.", explanation:"'Shake off' means to get rid of someone or something.", synonyms:["lose","rid of","escape"], partOfSpeech:"phrasal verb" },
+  { sentence:"She managed to ___ around the strict deadline.", answer:"work", korean:"그녀는 엄격한 마감 기한을 우회하는 방법을 찾았다.", explanation:"'Work around' means to find an alternative solution.", synonyms:["circumvent","bypass","navigate"], partOfSpeech:"phrasal verb" },
+  { sentence:"He decided to ___ together a quick report.", answer:"put", korean:"그는 빠르게 보고서를 작성하기로 했다.", explanation:"'Put together' means to compile or assemble something.", synonyms:["compile","assemble","prepare"], partOfSpeech:"phrasal verb" },
+  { sentence:"She tried to ___ in as much information as possible.", answer:"take", korean:"그녀는 가능한 한 많은 정보를 흡수하려 했다.", explanation:"'Take in' means to absorb or understand information.", synonyms:["absorb","process","comprehend"], partOfSpeech:"phrasal verb" },
+  { sentence:"He needed to ___ apart the argument to find the flaw.", answer:"pick", korean:"그는 논거를 분석해 결함을 찾아야 했다.", explanation:"'Pick apart' means to analyze something critically.", synonyms:["analyze","critique","dissect"], partOfSpeech:"phrasal verb" },
+  { sentence:"She decided to ___ over the budget one final time.", answer:"go", korean:"그녀는 예산을 마지막으로 한 번 더 검토하기로 했다.", explanation:"'Go over' means to review or examine carefully.", synonyms:["review","check","examine"], partOfSpeech:"phrasal verb" },
+  { sentence:"They need to ___ in more resources to finish on time.", answer:"bring", korean:"그들은 제때 끝내기 위해 더 많은 자원을 투입해야 한다.", explanation:"'Bring in' means to introduce or obtain additional help.", synonyms:["introduce","obtain","recruit"], partOfSpeech:"phrasal verb" },
+  { sentence:"She had to ___ up on the key terms before the meeting.", answer:"brush", korean:"그녀는 회의 전에 핵심 용어를 복습해야 했다.", explanation:"'Brush up on' means to quickly review or refresh knowledge.", synonyms:["review","refresh","polish"], partOfSpeech:"phrasal verb" },
+  { sentence:"He decided to ___ through with the original idea.", answer:"go", korean:"그는 원래 아이디어대로 진행하기로 했다.", explanation:"'Go through with' means to proceed with a plan as intended.", synonyms:["proceed","follow through","carry out"], partOfSpeech:"phrasal verb" },
+  { sentence:"She had to ___ out the right answer from the options.", answer:"pick", korean:"그녀는 선택지 중에서 옳은 답을 골라야 했다.", explanation:"'Pick out' means to select or identify something.", synonyms:["select","choose","identify"], partOfSpeech:"phrasal verb" },
+  { sentence:"He needed to ___ over his notes before the test.", answer:"go", korean:"그는 시험 전에 노트를 검토해야 했다.", explanation:"'Go over' means to review something carefully.", synonyms:["review","study","examine"], partOfSpeech:"phrasal verb" },
+  { sentence:"She decided to ___ with a simpler approach.", answer:"go", korean:"그녀는 더 간단한 방법을 선택하기로 했다.", explanation:"'Go with' means to choose or favor a particular option.", synonyms:["choose","select","opt for"], partOfSpeech:"phrasal verb" },
+  { sentence:"He managed to ___ out a compromise with his partner.", answer:"work", korean:"그는 파트너와 타협안을 이끌어냈다.", explanation:"'Work out' means to reach an agreement through negotiation.", synonyms:["negotiate","reach","achieve"], partOfSpeech:"phrasal verb" },
+  { sentence:"They had to ___ around the broken equipment.", answer:"work", korean:"그들은 고장난 장비를 우회하는 방법을 찾아야 했다.", explanation:"'Work around' means to avoid an obstacle and find alternatives.", synonyms:["circumvent","adapt","improvise"], partOfSpeech:"phrasal verb" },
+  { sentence:"She couldn't ___ out the meaning of the old text.", answer:"make", korean:"그녀는 오래된 문서의 의미를 해독할 수 없었다.", explanation:"'Make out' means to understand or decipher something.", synonyms:["decipher","understand","interpret"], partOfSpeech:"phrasal verb" },
+  { sentence:"He asked her to ___ forward any concerns.", answer:"bring", korean:"그는 그녀에게 걱정되는 사항을 앞으로 가져오라고 했다.", explanation:"'Bring forward' means to raise an issue for discussion.", synonyms:["raise","present","introduce"], partOfSpeech:"phrasal verb" },
+  { sentence:"He decided to ___ into a healthier lifestyle.", answer:"ease", korean:"그는 더 건강한 생활 방식에 서서히 적응하기로 했다.", explanation:"'Ease into' means to transition to something new gradually.", synonyms:["transition","adopt","shift"], partOfSpeech:"phrasal verb" },
+  { sentence:"They need to ___ out who is responsible for the error.", answer:"find", korean:"그들은 누가 오류에 책임이 있는지 알아내야 한다.", explanation:"'Find out' means to discover or determine the truth.", synonyms:["discover","determine","uncover"], partOfSpeech:"phrasal verb" },
+  { sentence:"She had to ___ off her shoes before entering the temple.", answer:"take", korean:"그녀는 절에 들어가기 전에 신발을 벗어야 했다.", explanation:"'Take off' means to remove clothing or footwear.", synonyms:["remove","slip off","pull off"], partOfSpeech:"phrasal verb" },
+  { sentence:"They needed to ___ through a lot of applications.", answer:"go", korean:"그들은 수많은 지원서를 검토해야 했다.", explanation:"'Go through' means to examine a large number of things.", synonyms:["review","process","examine"], partOfSpeech:"phrasal verb" },
+  { sentence:"He asked her to ___ ahead with the reservation.", answer:"go", korean:"그는 그녀에게 예약을 진행해달라고 했다.", explanation:"'Go ahead' means to proceed with a plan.", synonyms:["proceed","continue","make"], partOfSpeech:"phrasal verb" },
+  { sentence:"She decided to ___ up with a completely new idea.", answer:"come", korean:"그녀는 완전히 새로운 아이디어를 생각해내기로 했다.", explanation:"'Come up with' means to produce or create a new idea.", synonyms:["create","devise","generate"], partOfSpeech:"phrasal verb" },
+  { sentence:"She had to ___ out whether the flight was on time.", answer:"find", korean:"그녀는 비행기가 정시인지 알아내야 했다.", explanation:"'Find out' means to discover or learn something.", synonyms:["check","discover","determine"], partOfSpeech:"phrasal verb" },
+  { sentence:"She decided to ___ out the whole article before judging.", answer:"read", korean:"그녀는 판단하기 전에 기사를 전부 읽기로 했다.", explanation:"'Read out' means to read something in its entirety.", synonyms:["read through","read aloud","finish"], partOfSpeech:"phrasal verb" },
+  { sentence:"He had to ___ up the loose ends of the project.", answer:"tie", korean:"그는 프로젝트의 미결 사항들을 마무리해야 했다.", explanation:"'Tie up loose ends' means to finish remaining tasks.", synonyms:["finish","complete","wrap up"], partOfSpeech:"idiom" },
+  { sentence:"She needed to ___ the report in to her supervisor.", answer:"hand", korean:"그녀는 상사에게 보고서를 제출해야 했다.", explanation:"'Hand in' means to submit work to someone in authority.", synonyms:["submit","turn in","deliver"], partOfSpeech:"phrasal verb" },
+  { sentence:"She managed to ___ out a living from her artwork.", answer:"make", korean:"그녀는 자신의 예술 작품으로 생계를 유지했다.", explanation:"'Make a living' means to earn enough money to survive.", synonyms:["earn a living","support oneself"], partOfSpeech:"idiom" },
+  { sentence:"He decided to ___ over and ask for directions.", answer:"pull", korean:"그는 차를 세우고 길을 물어보기로 했다.", explanation:"'Pull over' means to stop a vehicle at the side of the road.", synonyms:["stop","park","stop the car"], partOfSpeech:"phrasal verb" },
+  { sentence:"They need to ___ along with the new company policy.", answer:"go", korean:"그들은 새 회사 방침에 따라야 한다.", explanation:"'Go along with' means to agree or comply with something.", synonyms:["comply","agree","conform"], partOfSpeech:"phrasal verb" },
+  { sentence:"She had to ___ aside time each week for exercise.", answer:"set", korean:"그녀는 매주 운동할 시간을 따로 마련해야 했다.", explanation:"'Set aside' means to reserve time or resources for something.", synonyms:["reserve","allocate","dedicate"], partOfSpeech:"phrasal verb" },
+  { sentence:"He asked her to ___ in mind the budget constraints.", answer:"bear", korean:"그는 그녀에게 예산 제약을 명심하라고 했다.", explanation:"'Bear in mind' means to remember or consider something.", synonyms:["remember","consider","keep in mind"], partOfSpeech:"phrasal verb" },
+  { sentence:"He managed to ___ back all of his loans on time.", answer:"pay", korean:"그는 모든 대출금을 제때 다 갚았다.", explanation:"'Pay back' means to repay money or return a favor.", synonyms:["repay","reimburse","settle"], partOfSpeech:"phrasal verb" },
+  { sentence:"They decided to ___ together their ideas for the pitch.", answer:"pull", korean:"그들은 발표를 위해 아이디어를 한데 모으기로 했다.", explanation:"'Pull together' means to combine efforts or ideas.", synonyms:["combine","consolidate","gather"], partOfSpeech:"phrasal verb" },
+  { sentence:"He tried to ___ out all the distractions in his room.", answer:"clear", korean:"그는 방의 모든 방해 요소를 없애려 했다.", explanation:"'Clear out' means to remove or eliminate things from a space.", synonyms:["remove","eliminate","declutter"], partOfSpeech:"phrasal verb" },
+  { sentence:"She had to ___ up a good argument for the debate.", answer:"come", korean:"그녀는 토론을 위해 좋은 논거를 생각해내야 했다.", explanation:"'Come up with' means to devise or produce something.", synonyms:["devise","produce","formulate"], partOfSpeech:"phrasal verb" },
+  { sentence:"They had to ___ down their original plan.", answer:"scale", korean:"그들은 원래 계획의 규모를 줄여야 했다.", explanation:"'Scale down' means to reduce the size or scope of something.", synonyms:["reduce","downsize","trim"], partOfSpeech:"phrasal verb" },
+];
+
+// ════════════════════════════════════════════════════════
+// STATE & CONFIG
+// ════════════════════════════════════════════════════════
+const MAX_WRONG_ATTEMPTS = 5;
+const REVIEW_INTERVAL_NORMAL = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
+const REVIEW_INTERVAL_WRONG  = 2 * 24 * 60 * 60 * 1000; // 2 days for wrong items
+const QUIZ_COUNT_BETWEEN_REVIEWS = 6; // every 6 normal questions, inject a review card
+
+let state = {
+  allItems: [],
+  wrongItemIds: new Set(), // IDs of items that are wrong
+  stats: { correct: 0, incorrect: 0, sessionCorrect: 0, sessionIncorrect: 0 },
+  recentHistory: [],
+  mode: 'normal', // 'normal' | 'review'
+  currentItem: null,
+  attempts: 0,
+  answered: false,
+  hadWrongThisRound: false, // track if current question was wrong (to add after next)
+  wrongCountedThisQuestion: false, // track if stats.incorrect was already incremented
+  aiQueue: [],
+  dailyStats: {},
+  studyStreak: 0,
+  lastStudyDate: null,
+  questionsSinceReview: 0,
+};
+
+// ════════════════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════════════════
+const LS_KEY = 'vocabtrainer_v3';
+
+function today() { return new Date().toISOString().slice(0, 10); }
+
+function hashStr(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  return String(h >>> 0);
+}
+
+function normalizeAnswer(s) {
+  return s.toLowerCase().trim().replace(/\s+/g, ' ').replace(/[.,!?;:]+$/, '');
+}
+
+function seenItemIds() {
+  return new Set(state.allItems.filter(i => i.seenCount > 0).map(i => i.id));
+}
+
+// ════════════════════════════════════════════════════════
+// PERSISTENCE
+// ════════════════════════════════════════════════════════
+function loadState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
+    if (saved.allItems?.length)   state.allItems = saved.allItems;
+    if (saved.wrongItemIds)       state.wrongItemIds = new Set(saved.wrongItemIds);
+    if (saved.stats)              state.stats = { ...state.stats, ...saved.stats };
+    if (saved.recentHistory)      state.recentHistory = saved.recentHistory;
+    if (saved.dailyStats)         state.dailyStats = saved.dailyStats;
+    if (saved.studyStreak != null)state.studyStreak = saved.studyStreak;
+    if (saved.lastStudyDate)      state.lastStudyDate = saved.lastStudyDate;
+  } catch {}
+}
+
+function saveState() {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify({
+      allItems: state.allItems,
+      wrongItemIds: [...state.wrongItemIds],
+      stats: state.stats,
+      recentHistory: state.recentHistory,
+      dailyStats: state.dailyStats,
+      studyStreak: state.studyStreak,
+      lastStudyDate: state.lastStudyDate,
+    }));
+  } catch {}
+}
+
+// ════════════════════════════════════════════════════════
+// DAILY TRACKING
+// ════════════════════════════════════════════════════════
+function recordDaily(isCorrect, itemId) {
+  const d = today();
+  if (!state.dailyStats[d]) state.dailyStats[d] = { correct: 0, incorrect: 0, words: [] };
+  if (isCorrect) state.dailyStats[d].correct++;
+  else state.dailyStats[d].incorrect++;
+  if (!state.dailyStats[d].words.includes(itemId)) state.dailyStats[d].words.push(itemId);
+  if (state.lastStudyDate !== d) {
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    state.studyStreak = state.lastStudyDate === yesterday ? state.studyStreak + 1 : 1;
+    state.lastStudyDate = d;
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// INIT DATASET
+// ════════════════════════════════════════════════════════
+function initDataset() {
+  loadState();
+  const existingIds = new Set(state.allItems.map(i => i.id));
+  const shuffled = [...BUILT_IN].sort(() => Math.random() - 0.5);
+  for (const item of shuffled) {
+    const id = hashStr(item.sentence);
+    if (!existingIds.has(id)) {
+      state.allItems.push({
+        ...item, id, wrongCount: 0, seenCount: 0, isAi: false,
+        lastSeenAt: 0, reviewInterval: REVIEW_INTERVAL_NORMAL,
+      });
+      existingIds.add(id);
+    }
+  }
+  saveState();
+}
+
+// ════════════════════════════════════════════════════════
+// QUESTION SELECTION
+// ════════════════════════════════════════════════════════
+function isDue(item) {
+  if (!item.lastSeenAt) return true; // never seen
+  return Date.now() - item.lastSeenAt >= item.reviewInterval;
+}
+
+function pickNextItem() {
+  const recentIds = new Set(state.recentHistory.map(i => i.id));
+  const wrongItems = state.allItems.filter(i => state.wrongItemIds.has(i.id));
+
+  // In review mode: only wrong items
+  if (state.mode === 'review') {
+    let pool = wrongItems.filter(i => !recentIds.has(i.id));
+    if (!pool.length) pool = wrongItems;
+    if (!pool.length) pool = state.allItems.filter(i => !recentIds.has(i.id));
+    const sorted = pool.sort((a, b) => (a.lastSeenAt || 0) - (b.lastSeenAt || 0));
+    return sorted[0] || pool[0];
+  }
+
+  // Periodic review injection in normal mode
+  if (state.questionsSinceReview >= QUIZ_COUNT_BETWEEN_REVIEWS && wrongItems.length > 0) {
+    state.questionsSinceReview = 0;
+    const pool = wrongItems.filter(i => !recentIds.has(i.id));
+    if (pool.length) {
+      pool.sort((a, b) => (a.lastSeenAt || 0) - (b.lastSeenAt || 0));
+      return pool[0];
+    }
+  }
+
+  // Spaced repetition: prioritize due items
+  const due = state.allItems.filter(i => isDue(i) && !recentIds.has(i.id));
+  const overdue = due.sort((a, b) => {
+    const aScore = (a.wrongCount * 2) + (Date.now() - (a.lastSeenAt || 0)) / 1000000;
+    const bScore = (b.wrongCount * 2) + (Date.now() - (b.lastSeenAt || 0)) / 1000000;
+    return bScore - aScore;
+  });
+
+  if (overdue.length > 0) {
+    const slice = Math.max(1, Math.floor(overdue.length / 3));
+    const top = overdue.slice(0, slice);
+    return top[Math.floor(Math.random() * top.length)];
+  }
+
+  // Fallback: any item
+  const pool = state.allItems.filter(i => !recentIds.has(i.id));
+  const fallback = pool.length ? pool : state.allItems;
+  return fallback[Math.floor(Math.random() * fallback.length)] || state.allItems[0];
+}
+
+// ════════════════════════════════════════════════════════
+// DOM REFS
+// ════════════════════════════════════════════════════════
+const $sentence     = document.getElementById('sentence');
+const $korean       = document.getElementById('korean-translation');
+const $wordInfoRow  = document.getElementById('word-info-row');
+const $attemptsRow  = document.getElementById('attempts-row');
+const $input        = document.getElementById('answer-input');
+const $feedback     = document.getElementById('feedback');
+const $feedLabel    = document.getElementById('feedback-label');
+const $correctAns   = document.getElementById('correct-answer');
+const $explanation  = document.getElementById('explanation');
+const $streakVal    = document.getElementById('streak-val');
+const $correctVal   = document.getElementById('correct-val');
+const $incorrectVal = document.getElementById('incorrect-val');
+const $reviewIndicator = document.getElementById('review-indicator');
+const $reviewBtn    = document.getElementById('review-btn');
+const $queueInfo    = document.getElementById('queue-info');
+const $progressFill = document.getElementById('progress-fill');
+const $hintText     = document.getElementById('hint-text');
+const $nextBtn      = document.getElementById('next-btn');
+
+// ════════════════════════════════════════════════════════
+// RENDER HELPERS
+// ════════════════════════════════════════════════════════
+function renderSentence(item) {
+  $sentence.innerHTML = item.sentence.replace('___', '<span class="blank">_____</span>');
+  $korean.textContent = item.korean || '';
+  // Show word info from the start
+  renderWordInfo(item);
+  $sentence.classList.add('fade-in');
+  $sentence.addEventListener('animationend', () => $sentence.classList.remove('fade-in'), { once: true });
+}
+
+function renderWordInfo(item) {
+  $wordInfoRow.innerHTML = '';
+  if (item.partOfSpeech) {
+    const c = document.createElement('span');
+    c.className = 'word-info-chip pos';
+    c.textContent = item.partOfSpeech;
+    $wordInfoRow.appendChild(c);
+  }
+  (item.synonyms || []).forEach(s => {
+    const c = document.createElement('span');
+    c.className = 'word-info-chip syn';
+    c.textContent = s;
+    $wordInfoRow.appendChild(c);
+  });
+}
+
+function renderAttempts() {
+  $attemptsRow.innerHTML = '';
+  for (let i = 0; i < MAX_WRONG_ATTEMPTS; i++) {
+    const d = document.createElement('div');
+    d.className = 'attempt-dot' + (i < state.attempts ? ' wrong' : '');
+    $attemptsRow.appendChild(d);
+  }
+}
+
+function renderStats() {
+  $streakVal.textContent = state.stats.sessionCorrect || 0;
+  $correctVal.textContent = state.stats.correct;
+  $incorrectVal.textContent = state.stats.incorrect;
+
+  const pct = state.allItems.length > 0
+    ? Math.min(100, (state.allItems.filter(i => i.seenCount > 0).length / state.allItems.length) * 100)
+    : 0;
+  $progressFill.style.width = pct + '%';
+
+  const wr = state.wrongItemIds.size;
+  $queueInfo.textContent = wr > 0 ? `틀린 단어 ${wr}개 복습 필요` : `총 ${state.allItems.length}개 카드`;
+
+  const isReview = state.mode === 'review';
+  $reviewIndicator.className = 'review-indicator' + (isReview ? ' visible' : '');
+  $reviewBtn.className = 'review-btn' + (isReview ? ' active' : '');
+}
+
+// ════════════════════════════════════════════════════════
+// REVIEW MODE
+// ════════════════════════════════════════════════════════
+function toggleReviewMode() {
+  state.mode = state.mode === 'review' ? 'normal' : 'review';
+  renderStats();
+  loadNext();
+  showPage('quiz');
+}
+
+// ════════════════════════════════════════════════════════
+// LOAD NEXT QUESTION
+// ════════════════════════════════════════════════════════
+function loadNext() {
+  // If current item was wrong this round, now add it to wrongItemIds
+  if (state.hadWrongThisRound && state.currentItem) {
+    state.wrongItemIds.add(state.currentItem.id);
+    saveState();
+  }
+  state.hadWrongThisRound = false;
+  state.wrongCountedThisQuestion = false;
+  state.answered = false;
+  state.attempts = 0;
+  $hintText.style.display = 'none';
+  $feedback.classList.remove('visible');
+  $feedLabel.textContent = '';
+  $correctAns.textContent = '';
+  $explanation.textContent = '';
+  $input.value = '';
+  $input.className = '';
+  $input.disabled = false;
+  $nextBtn.className = 'next-btn';
+  renderAttempts();
+
+  // Use AI queue occasionally
+  const useAi = state.aiQueue.length > 0 && Math.random() < 0.12;
+  state.currentItem = useAi ? state.aiQueue.shift() : pickNextItem();
+  state.questionsSinceReview++;
+
+  renderSentence(state.currentItem);
+  renderStats();
+  maybePrefetchAi();
+  setTimeout(() => $input.focus(), 50);
+}
+
+// ════════════════════════════════════════════════════════
+// AI PREFETCH
+// ════════════════════════════════════════════════════════
+async function maybePrefetchAi() {
+  if (state.aiQueue.length >= 2) return;
+  try {
+    const res = await fetch('/api/ai-question', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ count: 1 }), signal: AbortSignal.timeout(5000)
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data?.sentence && data?.answer) {
+      const id = hashStr(data.sentence + '_ai');
+      const enriched = { ...data, id, wrongCount: 0, seenCount: 0, isAi: true, lastSeenAt: 0, reviewInterval: REVIEW_INTERVAL_NORMAL };
+      if (!state.allItems.find(i => i.id === id)) state.allItems.push(enriched);
+      state.aiQueue.push(enriched);
+    }
+  } catch {}
+}
+
+// ════════════════════════════════════════════════════════
+// SHOW HINT
+// ════════════════════════════════════════════════════════
+function showHint() {
+  const letter = state.currentItem.answer[0];
+  const rest = '_'.repeat(Math.max(0, state.currentItem.answer.length - 1));
+  $hintText.textContent = `힌트: "${letter}${rest}"  ·  첫 글자는 '${letter.toUpperCase()}'`;
+  $hintText.style.display = 'block';
+}
+
+// ════════════════════════════════════════════════════════
+// HANDLE SUBMIT
+// ════════════════════════════════════════════════════════
+function handleSubmit() {
+  if (state.answered) { loadNext(); return; }
+  const raw = $input.value;
+  if (!raw.trim()) return;
+
+  const userAns = normalizeAnswer(raw);
+  const correctAns = normalizeAnswer(state.currentItem.answer);
+  const isCorrect = userAns === correctAns;
+  const item = state.currentItem;
+
+  if (isCorrect) {
+    state.answered = true;
+    state.stats.correct++;
+    state.stats.sessionCorrect = (state.stats.sessionCorrect || 0) + 1;
+    item.seenCount++;
+    item.lastSeenAt = Date.now();
+
+    // Increase review interval if correct (spaced repetition)
+    if (state.wrongItemIds.has(item.id)) {
+      // Still wrong — keep shorter interval, reset wrongCount
+      item.wrongCount = Math.max(0, item.wrongCount - 1);
+      if (item.wrongCount <= 0) {
+        state.wrongItemIds.delete(item.id);
+        item.reviewInterval = REVIEW_INTERVAL_NORMAL;
+      } else {
+        item.reviewInterval = REVIEW_INTERVAL_WRONG;
+      }
+    } else {
+      // Correct — extend interval (double up to 30 days)
+      item.reviewInterval = Math.min(item.reviewInterval * 2, 30 * 24 * 60 * 60 * 1000);
+    }
+
+    $input.classList.add('correct');
+    $feedLabel.textContent = '정답!';
+    $feedLabel.className = 'feedback-label correct';
+    $correctAns.textContent = '';
+    $explanation.textContent = item.explanation;
+    $feedback.classList.add('visible');
+    $nextBtn.className = 'next-btn visible';
+
+    state.recentHistory = [item, ...state.recentHistory].slice(0, 5);
+    recordDaily(true, item.id);
+    saveState();
+    renderStats();
+    renderAttempts();
+
+    // Auto-advance after 1.2s
+    setTimeout(() => { if (state.answered) loadNext(); }, 1200);
+
+  } else {
+    state.attempts++;
+    // Count each QUESTION wrong only once (not each wrong attempt)
+    if (!state.wrongCountedThisQuestion) {
+      state.stats.incorrect++;
+      state.wrongCountedThisQuestion = true;
+    }
+    state.stats.sessionCorrect = state.stats.sessionCorrect || 0;
+    item.seenCount++;
+    item.wrongCount++;
+    state.hadWrongThisRound = true; // mark — will be added to wrongItemIds on next card
+
+    $input.classList.remove('shake');
+    void $input.offsetWidth;
+    $input.classList.add('shake', 'incorrect');
+    $input.addEventListener('animationend', () => $input.classList.remove('shake'), { once: true });
+
+    renderAttempts();
+    if (state.attempts >= 3) showHint();
+
+    if (state.attempts >= MAX_WRONG_ATTEMPTS) {
+      state.answered = true;
+      item.lastSeenAt = Date.now();
+      item.reviewInterval = REVIEW_INTERVAL_WRONG;
+      $feedLabel.textContent = '오답';
+      $feedLabel.className = 'feedback-label incorrect';
+      $correctAns.textContent = item.answer;
+      $explanation.textContent = item.explanation;
+      $feedback.classList.add('visible');
+      $input.disabled = true;
+      $input.classList.remove('incorrect');
+      $nextBtn.className = 'next-btn visible';
+    } else {
+      $feedLabel.textContent = '틀렸습니다';
+      $feedLabel.className = 'feedback-label incorrect';
+      $correctAns.textContent = '';
+      $explanation.textContent = `${MAX_WRONG_ATTEMPTS - state.attempts}번 더 시도할 수 있습니다.`;
+      $feedback.classList.add('visible');
+    }
+
+    recordDaily(false, item.id);
+    saveState();
+    renderStats();
+
+    if (!state.answered) {
+      setTimeout(() => {
+        $input.value = '';
+        $input.classList.remove('incorrect');
+        $input.focus();
+      }, 600);
+    }
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// KEYBOARD
+// ════════════════════════════════════════════════════════
+// Enter only submits via the input handler.
+// After 5 wrong attempts, "다음 단어" button is the only way to advance.
+
+$input.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); handleSubmit(); }
+});
+
+document.addEventListener('click', (e) => {
+  const quizActive = document.getElementById('quiz-page').classList.contains('active');
+  if (quizActive && !state.answered && e.target !== $input && e.target !== $nextBtn) {
+    $input.focus();
+  }
+});
+
+// ════════════════════════════════════════════════════════
+// PAGE NAVIGATION
+// ════════════════════════════════════════════════════════
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(name + '-page').classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(t => {
+    if ((name === 'quiz' && t.textContent.trim() === '퀴즈') ||
+        (name === 'dashboard' && t.textContent.trim() === '대시보드')) {
+      t.classList.add('active');
+    }
+  });
+  if (name === 'quiz') setTimeout(() => $input.focus(), 50);
+  if (name === 'dashboard') renderDashboard();
+  if (name === 'wrong-words') renderWrongWordsPage();
+  if (name === 'all-words') renderAllWordsPage();
+}
+
+// ════════════════════════════════════════════════════════
+// DASHBOARD
+// ════════════════════════════════════════════════════════
+function renderDashboard() {
+  const d = today();
+  const dayStats = state.dailyStats[d] || { correct: 0, incorrect: 0 };
+  const todayTotal = dayStats.correct + dayStats.incorrect;
+  const todayRate = todayTotal > 0 ? Math.round(dayStats.correct / todayTotal * 100) : null;
+  const totalCorrect = state.stats.correct;
+  const totalIncorrect = state.stats.incorrect;
+  const totalAll = totalCorrect + totalIncorrect;
+  const totalRate = totalAll > 0 ? Math.round(totalCorrect / totalAll * 100) : null;
+  const seenCount = state.allItems.filter(i => i.seenCount > 0).length;
+
+  const dateStr = new Date().toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric', weekday:'long' });
+  document.getElementById('dash-subtitle').textContent = dateStr;
+  document.getElementById('d-streak').textContent = state.studyStreak || 0;
+  document.getElementById('d-today-rate').textContent = todayRate !== null ? `${todayRate}%` : '-';
+  document.getElementById('d-today-sub').textContent = todayRate !== null ? `정답 ${dayStats.correct} / 오답 ${dayStats.incorrect}` : '아직 학습 없음';
+  document.getElementById('d-total-seen').textContent = seenCount;
+  document.getElementById('d-wrong-count').textContent = state.wrongItemIds.size;
+
+  renderRing('ring-today', 'ring-today-label', todayRate, '#16a34a');
+  renderRing('ring-total', 'ring-total-label', totalRate, '#4f5ff7');
+  render7DayChart();
+  renderStreakCalendar();
+}
+
+function renderRing(circleId, labelId, pct, color) {
+  const circle = document.getElementById(circleId);
+  const label = document.getElementById(labelId);
+  const circumference = 2 * Math.PI * 32;
+  if (pct === null) { circle.style.strokeDashoffset = circumference; label.textContent = '-%'; }
+  else { circle.style.strokeDashoffset = circumference - (pct / 100) * circumference; label.textContent = pct + '%'; }
+  circle.style.stroke = color;
+  circle.style.transition = 'stroke-dashoffset 0.6s ease';
+}
+
+function render7DayChart() {
+  const wrap = document.getElementById('chart-wrap');
+  wrap.innerHTML = '';
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const dt = new Date(Date.now() - i * 86400000);
+    const key = dt.toISOString().slice(0, 10);
+    const label = dt.toLocaleDateString('ko-KR', { month:'numeric', day:'numeric' });
+    const s = state.dailyStats[key] || { correct: 0, incorrect: 0 };
+    days.push({ key, label, ...s });
+  }
+  const maxVal = Math.max(...days.map(d => d.correct + d.incorrect), 1);
+  days.forEach(day => {
+    const group = document.createElement('div');
+    group.className = 'chart-bar-group';
+    const bars = document.createElement('div');
+    bars.className = 'chart-bars';
+    const correctH = Math.round((day.correct / maxVal) * 76);
+    const wrongH = Math.round((day.incorrect / maxVal) * 76);
+    const b1 = document.createElement('div');
+    b1.className = 'chart-bar correct-bar';
+    b1.style.height = (correctH || 2) + 'px';
+    b1.title = `정답: ${day.correct}`;
+    const b2 = document.createElement('div');
+    b2.className = 'chart-bar incorrect-bar';
+    b2.style.height = (wrongH || 2) + 'px';
+    b2.title = `오답: ${day.incorrect}`;
+    bars.appendChild(b1); bars.appendChild(b2);
+    group.appendChild(bars);
+    const lbl = document.createElement('div');
+    lbl.className = 'chart-label';
+    lbl.textContent = day.label;
+    group.appendChild(lbl);
+    wrap.appendChild(group);
+  });
+}
+
+function renderStreakCalendar() {
+  const cal = document.getElementById('streak-calendar');
+  cal.innerHTML = '';
+  const d = today();
+  for (let i = 29; i >= 0; i--) {
+    const dt = new Date(Date.now() - i * 86400000);
+    const key = dt.toISOString().slice(0, 10);
+    const hasStudied = !!state.dailyStats[key];
+    const isToday = key === d;
+    const div = document.createElement('div');
+    div.className = 'streak-day' + (isToday && hasStudied ? ' studied-today' : hasStudied ? ' studied' : '');
+    div.title = key + (hasStudied ? ` (정답 ${state.dailyStats[key].correct}, 오답 ${state.dailyStats[key].incorrect})` : '');
+    cal.appendChild(div);
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// WRONG WORDS PAGE
+// ════════════════════════════════════════════════════════
+let _wrongFilter = '';
+function filterWrongWords() {
+  _wrongFilter = document.getElementById('wrong-search').value.toLowerCase();
+  renderWrongList();
+}
+
+function renderWrongWordsPage() {
+  const wrongItems = state.allItems.filter(i => state.wrongItemIds.has(i.id))
+    .sort((a, b) => b.wrongCount - a.wrongCount);
+  document.getElementById('wrong-words-sub').textContent = `총 ${wrongItems.length}개 단어`;
+  renderWrongList();
+}
+
+function renderWrongList() {
+  const list = document.getElementById('wrong-list');
+  const wrongItems = state.allItems.filter(i => state.wrongItemIds.has(i.id))
+    .sort((a, b) => b.wrongCount - a.wrongCount);
+  const filtered = _wrongFilter
+    ? wrongItems.filter(i => i.sentence.toLowerCase().includes(_wrongFilter) || i.answer.toLowerCase().includes(_wrongFilter) || (i.korean || '').includes(_wrongFilter))
+    : wrongItems;
+
+  list.innerHTML = '';
+  if (!filtered.length) {
+    list.innerHTML = '<div class="empty-state">틀린 단어가 없어요! 계속 유지하세요 🎉</div>';
+    return;
+  }
+  filtered.slice(0, 50).forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'word-item';
+    const left = document.createElement('div');
+    left.className = 'word-item-left';
+    const sent = document.createElement('div');
+    sent.className = 'word-item-sentence';
+    sent.textContent = item.sentence.replace('___', `[${item.answer}]`);
+    const kor = document.createElement('div');
+    kor.className = 'word-item-korean';
+    kor.textContent = item.korean || '';
+    const chips = document.createElement('div');
+    chips.className = 'word-item-chips';
+    if (item.partOfSpeech) {
+      const c = document.createElement('span');
+      c.className = 'word-info-chip pos';
+      c.textContent = item.partOfSpeech;
+      chips.appendChild(c);
+    }
+    (item.synonyms || []).slice(0, 2).forEach(s => {
+      const c = document.createElement('span');
+      c.className = 'word-info-chip syn';
+      c.textContent = s;
+      chips.appendChild(c);
+    });
+    left.appendChild(sent); left.appendChild(kor); left.appendChild(chips);
+    const right = document.createElement('div');
+    right.className = 'word-item-right';
+    const badge = document.createElement('span');
+    badge.className = 'badge wrong';
+    badge.textContent = `${item.wrongCount}회 오답`;
+    right.appendChild(badge);
+    div.appendChild(left); div.appendChild(right);
+    list.appendChild(div);
+  });
+}
+
+// ════════════════════════════════════════════════════════
+// ALL WORDS PAGE
+// ════════════════════════════════════════════════════════
+let _allFilter = '';
+function filterAllWords() {
+  _allFilter = document.getElementById('all-search').value.toLowerCase();
+  renderAllList();
+}
+
+function renderAllWordsPage() {
+  const seen = state.allItems.filter(i => i.seenCount > 0);
+  document.getElementById('all-words-sub').textContent = `${seen.length}개 단어 학습 완료 (전체 ${state.allItems.length}개)`;
+  renderAllList();
+}
+
+function renderAllList() {
+  const list = document.getElementById('all-list');
+  const seen = state.allItems.filter(i => i.seenCount > 0)
+    .sort((a, b) => (b.lastSeenAt || 0) - (a.lastSeenAt || 0));
+  const filtered = _allFilter
+    ? seen.filter(i => i.sentence.toLowerCase().includes(_allFilter) || i.answer.toLowerCase().includes(_allFilter) || (i.korean || '').includes(_allFilter))
+    : seen;
+
+  list.innerHTML = '';
+  if (!filtered.length) {
+    list.innerHTML = '<div class="empty-state">아직 학습한 단어가 없어요. 퀴즈를 시작해보세요!</div>';
+    return;
+  }
+  filtered.slice(0, 100).forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'word-item';
+    const left = document.createElement('div');
+    left.className = 'word-item-left';
+    const sent = document.createElement('div');
+    sent.className = 'word-item-sentence';
+    sent.textContent = item.sentence.replace('___', `[${item.answer}]`);
+    const kor = document.createElement('div');
+    kor.className = 'word-item-korean';
+    kor.textContent = item.korean || '';
+    const chips = document.createElement('div');
+    chips.className = 'word-item-chips';
+    if (item.partOfSpeech) {
+      const c = document.createElement('span');
+      c.className = 'word-info-chip pos';
+      c.textContent = item.partOfSpeech;
+      chips.appendChild(c);
+    }
+    (item.synonyms || []).slice(0, 2).forEach(s => {
+      const c = document.createElement('span');
+      c.className = 'word-info-chip syn';
+      c.textContent = s;
+      chips.appendChild(c);
+    });
+    left.appendChild(sent); left.appendChild(kor); left.appendChild(chips);
+    const right = document.createElement('div');
+    right.className = 'word-item-right';
+    const seenBadge = document.createElement('span');
+    seenBadge.className = 'badge neutral';
+    seenBadge.textContent = `${item.seenCount}회`;
+    right.appendChild(seenBadge);
+    if (state.wrongItemIds.has(item.id)) {
+      const wrongBadge = document.createElement('span');
+      wrongBadge.className = 'badge wrong';
+      wrongBadge.textContent = `${item.wrongCount}회 오답`;
+      right.appendChild(wrongBadge);
+    } else if (item.seenCount > 0) {
+      const okBadge = document.createElement('span');
+      okBadge.className = 'badge ok';
+      okBadge.textContent = '✓';
+      right.appendChild(okBadge);
+    }
+    div.appendChild(left); div.appendChild(right);
+    list.appendChild(div);
+  });
+}
+
+// ════════════════════════════════════════════════════════
+// BOOT
+// ════════════════════════════════════════════════════════
+initDataset();
+renderStats();
+loadNext();
+</script>
+</body>
+</html>
